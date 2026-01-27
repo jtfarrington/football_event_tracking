@@ -24,21 +24,6 @@ Real-time statistics overlay:
 - Pass statistics with accuracy
 - Camera movement data
 
-### Demo
-
-### Input:
-
-Raw football match video
-
-### Output:
-
-Annotated video with:
-
-- Player tracking and team identification
-- Ball tracking with interpolation for missing frames
-- Live statistics (possession, passes, speed, distance)
-- Camera movement overlay
-
 ### Tech Stack
 
 - Python 3.9+
@@ -96,7 +81,7 @@ The system provides:
 
 ## Acknowledgments
 
-This project was built following the excellent tutorial by [\[Original Creator Name\].](https://www.youtube.com/@codeinajiffy) The core tracking and team assignment functionality is based on their work.
+This project was built following the excellent tutorial by [codeinajiffy].(https://www.youtube.com/@codeinajiffy) The core tracking and team assignment functionality is based on their work.
 
 **My contributions include:**
 - Complete pass detection system with accuracy tracking
