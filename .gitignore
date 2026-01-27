@@ -1,0 +1,45 @@
+# Training outputs
+runs/
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Datasets (too large for git)
+training/football-players-detection-1/
+datasets/
+data/
+*.jpg
+*.png
+*.jpeg
+*.mp4
+*.avi
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Roboflow cache
+.roboflow/
