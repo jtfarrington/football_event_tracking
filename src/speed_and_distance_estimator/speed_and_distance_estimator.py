@@ -162,7 +162,7 @@ class SpeedAndDistance_Estimator():
                         )
                         
                         # Draw distance text (20 pixels below speed)
-                        cv2.putText(
+                        '''cv2.putText(
                             frame, 
                             f"{distance:.2f} m",
                             (position[0], position[1] + 20),
@@ -170,7 +170,7 @@ class SpeedAndDistance_Estimator():
                             0.5,
                             (0, 0, 0),
                             2
-                        )
+                        )'''
             
             output_frames.append(frame)
         

@@ -8,6 +8,7 @@ import cv2
 import sys 
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+from ball_tracker import SmartBallTracker
 
 
 class Tracker:
@@ -60,37 +61,52 @@ class Tracker:
                     
                     tracks[object][frame_num][track_id]['position'] = position
 
-    def interpolate_ball_positions(self, ball_positions):
+    def interpolate_ball_positions(self, ball_positions, tracks=None):
         """
-        Fill in missing ball positions using interpolation.
-        
-        Problem: Ball detection is inconsistent - it's small, moves fast, gets occluded
-        Solution: When ball is missing for a few frames, estimate its position
-        
-        Uses pandas interpolate() to smoothly fill gaps between known positions.
+        Fill in missing ball positions using smart tracking.
         
         Args:
-            ball_positions: List of ball tracking data per frame
-            
-        Returns:
-            Ball positions with gaps filled in
+            ball_positions: List of ball tracking data
+            tracks: Full tracking data including players (optional)
         """
-        # Extract bounding boxes, use empty list if ball not detected
-        ball_positions = [x.get(1, {}).get('bbox', []) for x in ball_positions]
         
-        # Convert to DataFrame for easy interpolation
-        df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
-
-        # Interpolate missing values (forward fill)
-        df_ball_positions = df_ball_positions.interpolate()
+        # Create an instance of SmartBallTracker
+        smart_tracker = SmartBallTracker()  # ← Create instance
+        smoothed_positions = []
         
-        # Backward fill any remaining NaN values at the start
-        df_ball_positions = df_ball_positions.bfill()
-
-        # Convert back to original format
-        ball_positions = [{1: {"bbox": x}} for x in df_ball_positions.to_numpy().tolist()]
-
-        return ball_positions
+        for frame_num, frame_data in enumerate(ball_positions):
+            # Extract YOLO detection if available
+            ball_bbox = frame_data.get(1, {}).get('bbox', None)
+            
+            # Get player positions for this frame if available
+            players = {}
+            if tracks is not None and frame_num < len(tracks['players']):
+                players = tracks['players'][frame_num]
+            
+            # Track the ball with player context using SmartBallTracker instance
+            estimated_bbox = smart_tracker.track(ball_bbox, frame_num, players)  # ← Use smart_tracker, not self
+            
+            # Store result with detection flag
+            if estimated_bbox is not None:
+                result = {
+                    1: {
+                        "bbox": estimated_bbox,
+                        "is_real_detection": ball_bbox is not None  # Mark if real detection
+                    }
+                }
+                smoothed_positions.append(result)
+            elif smart_tracker.last_good_bbox is not None:
+                result = {
+                    1: {
+                        "bbox": smart_tracker.last_good_bbox,
+                        "is_real_detection": False  # Interpolated
+                    }
+                }
+                smoothed_positions.append(result)
+            else:
+                smoothed_positions.append({})
+        
+        return smoothed_positions
 
     def detect_frames(self, frames):
         """
@@ -446,9 +462,14 @@ class Tracker:
             for _, referee in referee_dict.items():
                 frame = self.draw_ellipse(frame, referee["bbox"], (0, 255, 255))
             
-            # Draw ball (green triangle)
+            # Draw ball ONLY if it was actually detected (not interpolated)
             for track_id, ball in ball_dict.items():
-                frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 0))
+                # Check if this is a real detection or just interpolated
+                is_real = ball.get("is_real_detection", True)  # Default True for old data
+                
+                if is_real:
+                    # Only draw triangle if ball was actually detected by YOLO
+                    frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 0))
 
             # Draw statistics overlays
             frame = self.draw_team_ball_control(frame, frame_num, team_ball_control)

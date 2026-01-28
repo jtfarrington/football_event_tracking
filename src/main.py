@@ -30,7 +30,7 @@ from pass_detector import PassDetector
 def main():
     # ========== STEP 1: Load Video ==========
     print("Loading video...")
-    video_path = 'input_videos/A1606b0e6_0 (10).mp4'
+    video_path = 'C:\\Users\\jtfar\\football_event_tracking\\input_videos\\test (11).mp4'
     video_frames = read_video(video_path)
     print(f"Loaded {len(video_frames)} frames")
 
@@ -74,7 +74,7 @@ def main():
     # ========== STEP 5: Interpolate Ball Positions ==========
     print("Interpolating ball positions...")
     # Fill in missing ball detections (ball often occluded or missed)
-    tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
+    tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"], tracks)
 
     # ========== STEP 6: Calculate Speed and Distance ==========
     print("Calculating player speed and distance...")
@@ -109,11 +109,16 @@ def main():
     print("Tracking ball possession...")
     player_assigner = PlayerBallAssigner()
     team_ball_control = []
-    
+
     # For each frame, determine which player (if any) has the ball
     for frame_num, player_track in enumerate(tracks['players']):
-        ball_bbox = tracks['ball'][frame_num][1]['bbox']
-        assigned_player = player_assigner.assign_ball_to_player(player_track, ball_bbox)
+        # Check if ball exists in this frame
+        if 1 in tracks['ball'][frame_num] and 'bbox' in tracks['ball'][frame_num][1]:
+            ball_bbox = tracks['ball'][frame_num][1]['bbox']
+            assigned_player = player_assigner.assign_ball_to_player(player_track, ball_bbox)
+        else:
+            # No ball detected in this frame
+            assigned_player = -1
 
         if assigned_player != -1:
             # Mark this player as having the ball
@@ -122,8 +127,13 @@ def main():
             team_ball_control.append(tracks['players'][frame_num][assigned_player]['team'])
         else:
             # No player has ball - keep previous team's possession
-            team_ball_control.append(team_ball_control[-1])
-    
+            if team_ball_control:
+                # Continue previous team's possession
+                team_ball_control.append(team_ball_control[-1])
+            else:
+                # First frame and no ball - default to team 1
+                team_ball_control.append(1)
+
     team_ball_control = np.array(team_ball_control)
 
     # ========== STEP 9: Detect Passes ==========
