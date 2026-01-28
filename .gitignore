@@ -43,3 +43,6 @@ desktop.ini
 
 # Roboflow cache
 .roboflow/
+
+#stubs
+stubs/
