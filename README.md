@@ -85,13 +85,6 @@ The system provides:
 
 This project was built following the excellent tutorial by codeinajiffy Abdullah Tarek.(https://www.youtube.com/@codeinajiffy) The core tracking and team assignment functionality is based on their work.
 
-**My contributions include:**
-- Complete pass detection system with accuracy tracking
-- Enhanced code readability and documentation
-- Modular architecture improvements
-- Multi-video support with automatic stub generation
-- Custom utility functions and optimizations
-
 ## Future Enhancements
 
 - [ ] Heatmap generation (player positioning)
