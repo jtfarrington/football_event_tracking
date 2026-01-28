@@ -1,1 +1,1 @@
-from .ball_tracker import SmartBallTracker
+from .ball_tracker import UltimateBallTracker

@@ -30,7 +30,7 @@ from pass_detector import PassDetector
 def main():
     # ========== STEP 1: Load Video ==========
     print("Loading video...")
-    video_path = 'C:\\Users\\jtfar\\football_event_tracking\\input_videos\\test (11).mp4'
+    video_path = 'C:\\Users\\jtfar\\football_event_tracking\\input_videos\\08fd33_4.mp4'
     video_frames = read_video(video_path)
     print(f"Loaded {len(video_frames)} frames")
 
@@ -86,11 +86,25 @@ def main():
     # ========== STEP 7: Assign Players to Teams ==========
     print("Assigning players to teams...")
     team_assigner = TeamAssigner()
-    
-    # Analyze first frame to determine team colors (using K-means clustering)
+
+    # Find first frame with players detected
+    first_frame_with_players = None
+    first_frame_players = None
+
+    for frame_num in range(min(30, len(tracks['players']))):  # Check first 30 frames
+        if len(tracks['players'][frame_num]) > 0:
+            first_frame_with_players = frame_num
+            first_frame_players = tracks['players'][frame_num]
+            print(f"Found {len(first_frame_players)} players in frame {frame_num}")
+            break
+
+    if first_frame_with_players is None:
+        raise RuntimeError("No players detected in video! Check your YOLO model and video.")
+
+    # Analyze first frame with players to determine team colors
     team_assigner.assign_team_color(
-        video_frames[0], 
-        tracks['players'][0]
+        video_frames[first_frame_with_players], 
+        first_frame_players
     )
     
     # Assign each player to a team based on jersey color
@@ -169,7 +183,7 @@ def main():
     )
 
     # Draw speed and distance for each player (below their feet)
-    speed_and_distance_estimator.draw_speed_and_distance(output_video_frames, tracks)
+    #speed_and_distance_estimator.draw_speed_and_distance(output_video_frames, tracks)
 
     # ========== STEP 11: Save Output Video ==========
     print("Saving output video...")

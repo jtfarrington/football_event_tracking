@@ -8,7 +8,7 @@ import cv2
 import sys 
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
-from ball_tracker import SmartBallTracker
+from ball_tracker import UltimateBallTracker
 
 
 class Tracker:
@@ -63,50 +63,27 @@ class Tracker:
 
     def interpolate_ball_positions(self, ball_positions, tracks=None):
         """
-        Fill in missing ball positions using smart tracking.
+        Ultimate ball tracking with all advanced techniques.
         
-        Args:
-            ball_positions: List of ball tracking data
-            tracks: Full tracking data including players (optional)
+        Features:
+        - Multi-hypothesis tracking
+        - Confidence scoring
+        - Size validation
+        - Boundary constraints (if configured)
+        - Temporal smoothing
         """
         
-        # Create an instance of SmartBallTracker
-        smart_tracker = SmartBallTracker()  # ← Create instance
-        smoothed_positions = []
+        # Optional: Define field boundaries for constraint
+        # Format: [(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
+        # These should be the corners of the visible field area
+        # Set to None if you don't have field calibration
+        field_boundaries = None  # Or define your field corners
         
-        for frame_num, frame_data in enumerate(ball_positions):
-            # Extract YOLO detection if available
-            ball_bbox = frame_data.get(1, {}).get('bbox', None)
-            
-            # Get player positions for this frame if available
-            players = {}
-            if tracks is not None and frame_num < len(tracks['players']):
-                players = tracks['players'][frame_num]
-            
-            # Track the ball with player context using SmartBallTracker instance
-            estimated_bbox = smart_tracker.track(ball_bbox, frame_num, players)  # ← Use smart_tracker, not self
-            
-            # Store result with detection flag
-            if estimated_bbox is not None:
-                result = {
-                    1: {
-                        "bbox": estimated_bbox,
-                        "is_real_detection": ball_bbox is not None  # Mark if real detection
-                    }
-                }
-                smoothed_positions.append(result)
-            elif smart_tracker.last_good_bbox is not None:
-                result = {
-                    1: {
-                        "bbox": smart_tracker.last_good_bbox,
-                        "is_real_detection": False  # Interpolated
-                    }
-                }
-                smoothed_positions.append(result)
-            else:
-                smoothed_positions.append({})
+        # Create tracker
+        tracker = UltimateBallTracker(field_boundaries=field_boundaries)
         
-        return smoothed_positions
+        # Run tracking
+        return tracker.interpolate_ball_positions(ball_positions, tracks)
 
     def detect_frames(self, frames):
         """
@@ -133,29 +110,36 @@ class Tracker:
             
         return detections
     
+    def tighten_bbox(self, bbox, shrink_factor=1):
+        """
+        Shrink a bounding box by a percentage to make it tighter.
+        
+        Args:
+            bbox: [x1, y1, x2, y2]
+            shrink_factor: How much to shrink (0.1 = 10% smaller)
+        
+        Returns:
+            Tightened bbox [x1, y1, x2, y2]
+        """
+        x1, y1, x2, y2 = bbox
+        
+        width = x2 - x1
+        height = y2 - y1
+        
+        # Shrink from all sides
+        shrink_x = width * shrink_factor / 2
+        shrink_y = height * shrink_factor / 2
+        
+        x1 += shrink_x
+        x2 -= shrink_x
+        y1 += shrink_y
+        y2 -= shrink_y
+        
+        return [x1, y1, x2, y2]
+    
     def get_object_tracks(self, frames, read_from_stub=False, stub_path=None, video_name=None):
         """
         Detect and track all objects (players, referees, ball) across all frames.
-        
-        Process:
-        1. Check for cached results (stub file)
-        2. If no cache: Run YOLO detection on all frames
-        3. Use ByteTrack to assign consistent IDs
-        4. Separate objects by type (player/referee/ball)
-        5. Cache results for future use
-        
-        Args:
-            frames: List of video frames
-            read_from_stub: If True, load from cache instead of processing
-            stub_path: Path to cache file (optional)
-            video_name: Video filename for auto-generating cache path
-            
-        Returns:
-            Dictionary with tracking data: {
-                'players': [...],
-                'referees': [...],
-                'ball': [...]
-            }
         """
         # Auto-generate cache filename based on video name
         if video_name is not None and stub_path is None:
@@ -201,19 +185,23 @@ class Tracker:
             tracks["referees"].append({})
             tracks["ball"].append({})
 
-            # Store tracked players and referees
+            # Store tracked objects ← THIS LOOP MUST BE INDENTED INSIDE THE FRAME LOOP!
             for frame_detection in detection_with_tracks:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
                 track_id = frame_detection[4]
 
                 if cls_id == cls_names_inv['player']:
-                    tracks["players"][frame_num][track_id] = {"bbox": bbox}
+                    # Tighten player bounding boxes by 10%
+                    tight_bbox = self.tighten_bbox(bbox, shrink_factor=0.1)
+                    tracks["players"][frame_num][track_id] = {"bbox": tight_bbox}
                 
                 if cls_id == cls_names_inv['referee']:
-                    tracks["referees"][frame_num][track_id] = {"bbox": bbox}
+                    # Tighten referee boxes too
+                    tight_bbox = self.tighten_bbox(bbox, shrink_factor=0.1)
+                    tracks["referees"][frame_num][track_id] = {"bbox": tight_bbox}
             
-            # Store ball detections (ball doesn't get tracked with ByteTrack, always ID=1)
+            # Store ball detections separately (not tracked with ByteTrack)
             for frame_detection in detection_supervision:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
@@ -462,14 +450,19 @@ class Tracker:
             for _, referee in referee_dict.items():
                 frame = self.draw_ellipse(frame, referee["bbox"], (0, 255, 255))
             
-            # Draw ball ONLY if it was actually detected (not interpolated)
+            # Draw ball with confidence-based colors ← UPDATE THIS SECTION
             for track_id, ball in ball_dict.items():
                 # Check if this is a real detection or just interpolated
-                is_real = ball.get("is_real_detection", True)  # Default True for old data
+                is_real = ball.get("is_real_detection", True)
+                confidence = ball.get("confidence", 1.0)
                 
                 if is_real:
-                    # Only draw triangle if ball was actually detected by YOLO
+                    # Real detection - draw in green
                     frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 0))
+                elif confidence >= 0.5:
+                    # High-confidence prediction - draw in yellow
+                    frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 255))
+                # Low confidence predictions (<0.5) are not drawn at all
 
             # Draw statistics overlays
             frame = self.draw_team_ball_control(frame, frame_num, team_ball_control)

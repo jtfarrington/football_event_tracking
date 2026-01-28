@@ -115,6 +115,11 @@ class TeamAssigner:
             frame: First video frame
             player_detections: Dictionary of player detections in first frame
         """
+
+        # Safety check: need at least 2 players to assign teams
+        if len(player_detections) < 2:
+            raise ValueError(f"Need at least 2 players to assign teams, got {len(player_detections)}")
+        
         # Extract jersey color for every player in the frame
         player_colors = []
         for _, player_detection in player_detections.items():
