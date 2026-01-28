@@ -1,6 +1,6 @@
 # Football Event Tracking System
 
-A comprehensive computer vision system for analyzing football (soccer) matches using YOLO object detection, ByteTrack, and advanced tracking algorithms. This project processes match videos to extract detailed statistics including player movements, team possession, pass completion rates, speed, and distance traveled.
+A computer vision system for analyzing football (soccer) matches using YOLO object detection, ByteTrack, and advanced tracking algorithms. This project processes match videos to extract detailed statistics including player movements, team possession, pass completion rates, speed, and distance traveled.
 
 ![](https://github.com/jtfarrington/football_event_tracking/blob/main/my_gif.gif)
 
