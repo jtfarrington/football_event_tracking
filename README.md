@@ -83,7 +83,7 @@ The system provides:
 
 ## Acknowledgments
 
-This project was built following the excellent tutorial by [codeinajiffy].(https://www.youtube.com/@codeinajiffy) The core tracking and team assignment functionality is based on their work.
+This project was built following the excellent tutorial by codeinajiffy Abdullah Tarek.(https://www.youtube.com/@codeinajiffy) The core tracking and team assignment functionality is based on their work.
 
 **My contributions include:**
 - Complete pass detection system with accuracy tracking
