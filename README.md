@@ -4,7 +4,6 @@ A comprehensive computer vision system for analyzing football (soccer) matches u
 
 ![](https://github.com/jtfarrington/football_event_tracking/blob/main/my_gif.gif)
 
-
 ## Core Functionality
 
 - Object Detection & Tracking: Detects and tracks players, referees, and the ball across video frames
